@@ -2,9 +2,39 @@ import RouteMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
 import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
-import request from '@request';
-import * as cheerio from 'cheerio';
-import { getId } from '@util';
+import { apiRequest, pickImg, toResourceSongInfo } from '@util';
+
+const API_HOST = 'https://app.c.nf.migu.cn';
+const SONG_PAGE_SIZE = 100;
+
+async function getAlbumSongs(id: string): Promise<{ list?: SongInfo[], errMsg?: string }> {
+  const getPage = (pageNo: number): Promise<any> => apiRequest(
+    `${API_HOST}/MIGUM3.0/resource/album/song/v2.0`,
+    { albumId: id, pageNo, pageSize: SONG_PAGE_SIZE },
+  );
+  const firstPage = await getPage(1);
+  if (firstPage.code !== '000000' || !firstPage.data || !Array.isArray(firstPage.data.songList)) {
+    return { errMsg: firstPage.info || '获取专辑歌曲失败' };
+  }
+
+  const total = Number(firstPage.data.totalCount) || firstPage.data.songList.length;
+  const pageCount = Math.ceil(total / SONG_PAGE_SIZE);
+  const otherPages = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => getPage(index + 2)),
+  );
+  const failedPage = otherPages.find(page => (
+    page.code !== '000000' || !page.data || !Array.isArray(page.data.songList)
+  ));
+  if (failedPage) {
+    return { errMsg: failedPage.info || '获取专辑歌曲失败' };
+  }
+
+  const songs = [
+    ...firstPage.data.songList,
+    ...otherPages.reduce((list: any[], page: any) => list.concat(page.data.songList), []),
+  ];
+  return { list: songs.map(toResourceSongInfo) };
+}
 
 const Router: RouteMap = {
   async ['/']({ query }) {
@@ -15,55 +45,43 @@ const Router: RouteMap = {
         errMsg: 'id ?'
       }
     }
-    const result = await request(`http://music.migu.cn/v3/music/album/${id}`, {
-      dataType: 'raw',
+    const result = await apiRequest(`${API_HOST}/MIGUM2.0/v1.0/content/resourceinfo.do`, {
+      needSimple: '00',
+      resourceType: 2003,
+      resourceId: id,
     });
+    const album = Array.isArray(result.resource) ? result.resource[0] : undefined;
+    if (result.code !== '000000' || !album) {
+      return {
+        result: 200,
+        errMsg: result.info || '专辑不存在或服务异常',
+      };
+    }
 
-    const $ = cheerio.load(result);
+    const songResult = await getAlbumSongs(id);
+    if (!songResult.list) {
+      return {
+        result: 200,
+        errMsg: songResult.errMsg || '获取专辑歌曲失败',
+      };
+    }
 
-    const desc = $('.content .intro').text();
-    const name = $('.content .title').text();
-    const publishTime = $('.content .pub-date').text().replace(/[^\d|-]/g, '');
-    const picUrl = $('.mad-album-info .thumb-img').attr('src');
-    const songList: SongInfo[] = [];
-    const artists: ArtistInfo[] = [];
-    const company = $('.pub-company').text().replace(/^发行公司：/, '');
-    $('.singer-name a').each((i, o) => {
-      artists.push({
-        id: getId($(o).attr('href')),
-        name: $(o).text()
-      });
-    });
-    $('.songlist-body .J_CopySong').each((i, o) => {
-      const ar: ArtistInfo[] = [];
-      const $song = $(o);
-      $song.find('.song-singers a').each((i, o) => {
-        ar.push({
-          id: getId($(o).attr('href')),
-          name: $(o).text()
-        })
-      });
-      songList.push({
-        name: $song.find('.song-name-txt').text(),
-        id: $song.attr('data-mid'),
-        cid: $song.attr('data-cid'),
-        artists: ar,
-        album: {
-          name,
-          id,
-        }
-      })
-    });
+    const singerNames = String(album.singer || '').split(/[|,]/).filter(Boolean);
+    const singerIds = String(album.singerId || '').split(/[|,]/);
+    const artists: ArtistInfo[] = singerNames.map((name: string, index: number) => ({
+      id: singerIds[index] || '',
+      name,
+    }));
 
     const data: AlbumInfo = {
-      name,
-      id,
+      name: album.title || '',
+      id: album.albumId || id,
       artists,
-      company,
-      publishTime,
-      picUrl,
-      desc,
-      songList,
+      company: album.publishCorp || album.publishCompany || '',
+      publishTime: album.publishTime || album.publishDate || '',
+      picUrl: pickImg(album.imgItems),
+      desc: album.summary || '',
+      songList: songResult.list,
     };
 
     return {
@@ -80,23 +98,17 @@ const Router: RouteMap = {
         errMsg: 'id ？'
       }
     }
-    const result = await request(`http://m.music.migu.cn/migu/remoting/cms_album_song_list_tag?albumId=${id}&pageSize=100`);
-    const data: SongInfo[] = result.result.results.map(({ picM, listenUrl, singerId, singerName, songId, songName, mvCopyrightId, copyrightId }) => ({
-      picUrl: picM,
-      url: listenUrl,
-      id: songId,
-      cid: copyrightId,
-      mvCid: mvCopyrightId,
-      name: songName,
-      artists: singerId.map((id, i) => ({
-        id,
-        name: singerName[i],
-      }))
-    }));
+    const songResult = await getAlbumSongs(id);
+    if (!songResult.list) {
+      return {
+        result: 200,
+        errMsg: songResult.errMsg || '获取专辑歌曲失败',
+      };
+    }
 
     return {
       result: 100,
-      data,
+      data: songResult.list,
     }
   },
 }

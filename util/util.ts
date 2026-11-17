@@ -18,7 +18,7 @@ const API_HEADERS = {
 const ENCODE_KEY = 'Jk8qzuePiJ1qE3mDYhLQ3T73DtDoAhLP';
 
 const CONTENT_HOST = 'https://c.musicapp.migu.cn';
-const STRATEGY_HOST = 'https://app.c.nf.migu.cn';
+const STRATEGY_HOST = 'https://c.musicapp.migu.cn';
 const IMG_HOST = 'https://d.musicapp.migu.cn';
 
 export function decodeEnvelope(data: Buffer | string): any {
@@ -76,12 +76,13 @@ export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId
   // 高品质需要登录态，拿不到时退回普通品质
   const flags = toneFlag === 'PQ' ? ['PQ'] : [toneFlag, 'PQ'];
   for (const flag of flags) {
-    const res = await apiRequest(`${STRATEGY_HOST}/strategy/pc/listen/v2.0`, {
+    const res = await apiRequest(`${STRATEGY_HOST}/strategy/listen-url/h5/v2.4`, {
       contentId: realContentId,
       copyrightId: cid,
       resourceType: 2,
       netType: '01',
       toneFlag: flag,
+      lowerQualityContentId: realContentId,
     });
     if (res.data && res.data.url) {
       return res.data.url;
@@ -115,6 +116,28 @@ export function toSongInfo(song: any): SongInfo {
       id: album.id || '',
     },
     artists: (song.singers || []).map(({ id, name }: any): ArtistInfo => ({ id, name })),
+  };
+}
+
+export function toResourceSongInfo(song: any): SongInfo {
+  const picUrl = fullImgUrl(song.img1 || song.img2 || '');
+  return {
+    name: song.songName,
+    id: song.songId || song.contentId,
+    cid: song.copyrightId,
+    contentId: song.contentId,
+    mvId: song.mvId,
+    album: {
+      id: song.albumId || '',
+      name: song.album || '',
+      picUrl,
+    },
+    artists: (song.singerList || []).map(({ id, name }: any): ArtistInfo => ({
+      id: id || '',
+      name: name || '',
+    })),
+    picUrl,
+    duration: Number(song.duration) || 0,
   };
 }
 

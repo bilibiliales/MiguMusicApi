@@ -68,6 +68,10 @@ miguMusic.default('search', { keyword: '周杰伦' })
 - 获取歌词接口
 
 ## 更新记录
+26-11-17：🍭 排查并修复全量接口，增加网页APP demo
+
+26-11-16：🍥 重构，适配 Windows 平台
+
 21-10-05：🍠 重构，支持 npm
 
 21-06-27：🌽 修复搜索出错问题
@@ -121,7 +125,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 }
 ```
 
-栗子：[/search?keyword=周杰伦](http://api.migu.jsososo.com/search?keyword=周杰伦)
+栗子：[/search?keyword=周杰伦](/search?keyword=周杰伦 ':ignore :target=_self')
 
 ### 匹配歌曲
 
@@ -136,7 +140,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 这个接口一般用来输入 歌手 + 歌名 + 专辑 来进行匹配歌曲。通过调用搜索接口并取第一首歌信息来实现，同时这个接口会返回专辑图片和播放链接的信息，
 上面的搜索接口不会。
 
-栗子：[/song/find?keyword=周杰伦+晴天](http://api.migu.jsososo.com/song/find?keyword=周杰伦+晴天)
+栗子：[/song/find?keyword=周杰伦+晴天](/song/find?keyword=周杰伦+晴天 ':ignore :target=_self')
 
 ### 歌曲信息
 
@@ -148,7 +152,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 这个是获取歌曲的基本信息，会返回歌曲的链接
 
-栗子：[/song?cid=60054701934](http://api.migu.jsososo.com/song?cid=60054701934)
+栗子：[/song?cid=60054701934](/song?cid=60054701934 ':ignore :target=_self')
 
 ### 获取音乐、图片链接
 
@@ -158,11 +162,20 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `cid`: 歌曲 cid 必填
 
-`flac`: 默认 `0`, 为 `0` 返回 320k 码率音乐，否则返回无损 flac，
+`flac`: 默认 `0`，为 `0` 请求高品质，否则请求无损音质；无法提供时会回退到普通音质。
 
-`isRedirect`: 默认 `0`, 非 `0` 时为重定向至播放链接
+`isRedirect`: 默认 `0`，非 `0` 时重定向到播放链接。播放链接是带时效的签名 URL，可能受歌曲版权和会员权限限制。
 
-栗子：[/song/url?cid=60054701934](http://api.migu.jsososo.com/song/url?cid=60054701934)
+栗子：[/song/url?cid=60054701923](/song/url?cid=60054701923 ':ignore :target=_self')
+
+成功时返回的 `data` 是非空播放链接（以下链接仅展示格式，实际签名参数会变化）：
+
+```json
+{
+  "result": 100,
+  "data": "https://freetyst.nf.migu.cn/<song-file>.mp3?<signed-parameters>"
+}
+```
 
 ### 获取歌词
 
@@ -172,7 +185,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `cid`: 歌曲 cid 必填
 
-栗子：[/lyric?cid=60054701923](http://api.migu.jsososo.com/lyric?cid=60054701923)
+栗子：[/lyric?cid=60054701923](/lyric?cid=60054701923 ':ignore :target=_self')
 
 ### 专辑
 
@@ -184,7 +197,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `id`: 专辑 id 必填
 
-栗子：[/album?id=1003767159](http://api.migu.jsososo.com/album?id=1003767159)
+栗子：[/album?id=1003767159](/album?id=1003767159 ':ignore :target=_self')
 
 #### 专辑歌曲
 
@@ -194,9 +207,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `id`: 专辑 id 必填
 
-上个接口是基于网页爬虫，这个走接口转发，只获取歌曲，但是可能会导致部分歌曲只返回 id，没有其他信息
-
-栗子：[/album/songs?id=1003767159](http://api.migu.jsososo.com/album/songs?id=1003767159)
+栗子：[/album/songs?id=1003767159](/album/songs?id=1003767159 ':ignore :target=_self')
 
 ### 歌手
 
@@ -208,7 +219,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `id`: 歌手 id 必填
 
-栗子：[/singer/desc?id=112](http://api.migu.jsososo.com/singer/desc?id=112)
+栗子：[/singer/desc?id=112](/singer/desc?id=112 ':ignore :target=_self')
 
 #### 歌手歌曲
 
@@ -216,13 +227,13 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 参数：
 
-`id`: 歌曲 id 必填
+`id`: 歌手 id 必填
 
 `pageNo`: 分页，默认 1
 
-这个接口中一页为20首歌曲，同样，返回 `totalPage` 参数不返回总数
+这个接口中一页为 50 首歌曲，返回 `totalPage` 参数表示当前可继续请求到的页码，不代表歌曲总页数。
 
-栗子：[/singer/songs?id=112](http://api.migu.jsososo.com/singer/songs?id=112)
+栗子：[/singer/songs?id=112](/singer/songs?id=112 ':ignore :target=_self')
 
 #### 歌手专辑
 
@@ -234,7 +245,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `pageNo`: 分页，默认 1
 
-栗子：[/singer/albums?id=112](http://api.migu.jsososo.com/singer/albums?id=112)
+栗子：[/singer/albums?id=112](/singer/albums?id=112 ':ignore :target=_self')
 
 
 ### 歌单信息
@@ -247,7 +258,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 返回歌单数据以及歌单中有版权的歌曲信息，因为这个接口涉及调用的接口比较多（特别是多分页的情况），所以调用可能会慢
 
-栗子：[/playlist?id=115481041](http://api.migu.jsososo.com/playlist?id=115481041)
+栗子：[/playlist?id=115481041](/playlist?id=115481041 ':ignore :target=_self')
 
 ### 推荐
 
@@ -263,7 +274,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 一页显示10条。
 
-栗子：[/recommend/playlist](http://api.migu.jsososo.com/recommend/playlist)
+栗子：[/recommend/playlist](/recommend/playlist ':ignore :target=_self')
 
 #### 新歌
 
@@ -275,7 +286,7 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `pageSize`: 默认 10
 
-栗子：[/new/songs](http://api.migu.jsososo.com/new/songs)
+栗子：[/new/songs](/new/songs ':ignore :target=_self')
 
 #### 新专辑
 
@@ -287,4 +298,4 @@ miguMusic.default('search', { keyword: '周杰伦' })
 
 `pageSize`: 默认 10
 
-栗子：[/new/albums](http://api.migu.jsososo.com/new/albums)
+栗子：[/new/albums](/new/albums ':ignore :target=_self')

@@ -1,15 +1,102 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
-  a(href="https://jsososo.github.io/MiguMusicApi") 查看文档
-  p 可以戳戳下面的链接看看
-  span 1、
-  a(href="/search?keyword=周杰伦") 搜索接口
-  br
-  span 2、
-  a(href="/lyric?cid=6005479Z068") 获取歌词
-  br
-  span 3、
-  a(href="/song/url?cid=60054701923&id=3790007&needPic=1") 获取播放链接
+  .app-shell
+    aside.sidebar
+      a.brand(href='#/home', data-route='/home', aria-label='Migu 音乐首页')
+        span.brand-mark M
+        span.brand-name
+          strong migu
+          small MUSIC SPACE
+
+      .nav-caption 发现
+      nav.main-nav(aria-label='主导航')
+        button.nav-item.is-active(type='button', data-route='/home')
+          span.nav-icon(aria-hidden='true') ◈
+          span 首页
+        button.nav-item(type='button', data-route='/new/songs')
+          span.nav-icon(aria-hidden='true') ♪
+          span 新歌速递
+        button.nav-item(type='button', data-route='/new/albums')
+          span.nav-icon(aria-hidden='true') ▧
+          span 最新专辑
+        button.nav-item(type='button', data-route='/playlists')
+          span.nav-icon(aria-hidden='true') ▤
+          span 推荐歌单
+
+      .nav-caption.library-caption 我的音乐
+      nav.main-nav(aria-label='个人音乐')
+        button.nav-item(type='button', data-route='/favorites')
+          span.nav-icon(aria-hidden='true') ♡
+          span 我喜欢的
+
+      .sidebar-bottom
+        .sidebar-note
+          span.note-dot
+          span 音乐，随时开始
+        a.docs-link(href='/docs/')
+          span.nav-icon(aria-hidden='true') ↗
+          span API 文档
+
+    .main-area
+      header.topbar
+        .topbar-context
+          span.context-mark
+          span#context-label 音乐空间
+        form.search-bar#search-form(role='search')
+          label.sr-only(for='search-kind') 搜索类别
+          select#search-kind(aria-label='搜索类别')
+            option(value='song') 单曲
+            option(value='album') 专辑
+            option(value='singer') 歌手
+            option(value='playlist') 歌单
+          label.sr-only(for='search-input') 搜索音乐
+          input#search-input(type='search', placeholder='搜索歌曲、歌手、专辑…', autocomplete='off')
+          button.search-submit(type='submit', aria-label='搜索')
+            span(aria-hidden='true') ⌕
+        a.topbar-docs(href='/docs/', title='接口文档') 文档
+
+      main#page-content.page-content(tabindex='-1')
+
+      footer.page-footer
+        span 为喜欢的声音留一点空间
+        span.footer-separator ·
+        span 由 Migu Music API 提供
+
+  section.player-bar#player-bar(aria-label='音乐播放器')
+    .player-progress
+      span.player-time#player-current-time 0:00
+      input#player-progress(type='range', min='0', max='100', value='0', aria-label='播放进度')
+      span.player-time#player-duration 0:00
+    .player-content
+      .player-track
+        .player-cover#player-cover
+          span.cover-note ♪
+        .player-track-copy
+          strong#player-song-title 尚未播放
+          span#player-song-artist 搜索或选择一首歌曲
+        button.player-favorite(type='button', data-action='player-favorite', aria-label='收藏歌曲', title='收藏歌曲') ♡
+      .player-controls
+        button.player-control(type='button', data-action='previous-song', aria-label='上一首', title='上一首') ⏮
+        button.player-play(type='button', data-action='toggle-play', aria-label='播放', title='播放') ▶
+        button.player-control(type='button', data-action='next-song', aria-label='下一首', title='下一首') ⏭
+      .player-options
+        button.player-option(type='button', data-action='toggle-repeat', title='循环关闭', aria-label='切换循环模式') ↻
+        button.player-option.lyrics-trigger(type='button', data-action='open-lyrics', title='查看歌词') 词
+        label.volume-control
+          span(aria-hidden='true') ◖
+          input#player-volume(type='range', min='0', max='1', step='0.05', value='0.72', aria-label='音量')
+
+  audio#audio-element(preload='metadata')
+
+  .lyrics-modal.hidden#lyrics-modal(role='dialog', aria-modal='true', aria-labelledby='lyrics-title')
+    .lyrics-panel
+      .lyrics-header
+        div
+          span.eyebrow 正在聆听
+          h2#lyrics-title 歌词
+        button.icon-button(type='button', data-action='close-lyrics', aria-label='关闭歌词') ×
+      .lyrics-meta#lyrics-meta
+      .lyrics-body#lyrics-body
+
+  .toast#toast(role='status', aria-live='polite')

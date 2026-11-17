@@ -1,4 +1,4 @@
-# QQMusicApi
+# MiguMusicApi
 
 [![NPM](https://img.shields.io/npm/v/migu-music-api.svg)](https://www.npmjs.com/package/migu-music-api)
 [![github](https://img.shields.io/badge/github-MiguMusicApi-brightgreen.svg)](https://github.com/jsososo/MiguMusicApi)
@@ -17,16 +17,18 @@
 ```shell script
 git clone git@github.com:jsososo/MiguMusicApi.git
 
-yarn
+npm install
 
-yarn start
+npm start
 ```
+
+启动后打开 `http://localhost:3400`，即可使用在线音乐页面搜索歌曲、歌手、专辑和歌单，播放歌曲、查看歌词并保存本机收藏。页面使用本项目的同源 API；接口文档可从页面中的“API 文档”入口打开。
 
 
 ### npm
 
 ```shell script
-yarn add migu-music-api
+npm add migu-music-api
 ```
 
 #### 接口调用

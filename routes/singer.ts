@@ -2,9 +2,9 @@ import RouterMap = Types.RouteMap;
 import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
 import SongInfo = Types.SongInfo;
-import * as cheerio from 'cheerio';
-import request from "@request";
-import { getId } from "@util";
+import { apiRequest, pickImg, toResourceSongInfo } from "@util";
+
+const API_HOST = 'https://app.c.nf.migu.cn';
 
 
 const Router: RouterMap = {
@@ -16,68 +16,68 @@ const Router: RouterMap = {
         errMsg: 'id ?'
       }
     }
-    const result = await request(`http://music.migu.cn/v3/music/artist/${id}`, { dataType: 'raw' });
-    const $ = cheerio.load(result);
-    const name = $('.artist-info .artist-name a').text();
-    const picUrl = $('.artist-info .artist-avatar img').attr('src');
-    const desc = $('#J_ArtistIntro .content').text();
+    const result = await apiRequest(`${API_HOST}/MIGUM2.0/v1.0/content/resourceinfo.do`, {
+      needSimple: '00',
+      resourceType: 2002,
+      resourceId: id,
+    });
+    const singer = Array.isArray(result.resource) ? result.resource[0] : undefined;
+    if (result.code !== '000000' || !singer) {
+      return {
+        result: 200,
+        errMsg: result.info || '歌手不存在或服务异常',
+      };
+    }
     return {
       result: 100,
       data: {
-        name,
-        picUrl,
-        id,
-        desc,
+        name: singer.singer || '',
+        picUrl: pickImg(singer.imgs),
+        id: singer.singerId || id,
+        desc: singer.summary || '',
       },
     };
   },
   async ['/songs']({ query }) {
     const { id, pageno, pageNo } = query;
-    let page = pageNo || pageno || 1;
     if (!id) {
       return {
         result: 500,
         errMsg: 'id ?'
       };
     }
-    const result = await request(`http://music.migu.cn/v3/music/artist/${id}/song?page=${page}`, { dataType: 'raw' });
-    const $ = cheerio.load(result);
-    const list: SongInfo[] = [];
-    $('.songlist-body .J_CopySong').each((i, o) => {
-      const $song = $(o);
-      const artists: ArtistInfo[] = [];
-
-      $song.find('.J_SongSingers a').each((i, o) => {
-        artists.push({
-          id: getId($(o).attr('href')),
-          name: $(o).text()
-        })
-      });
-      const $album = $song.find('.song-belongs a').first();
-      const album = {
-        id: getId($album.attr('href')),
-        name: $album.text(),
+    const page = Math.max(1, Number(pageNo || pageno) || 1);
+    const result = await apiRequest(`${API_HOST}/bmw/singer/song/v1.0`, {
+      singerId: id,
+      pageNo: page,
+      type: 1,
+    });
+    if (result.code !== '000000' || !result.data || !Array.isArray(result.data.contents)) {
+      return {
+        result: 200,
+        errMsg: result.info || '获取歌手歌曲失败',
       };
-      list.push({
-        id: $song.attr('data-mid'),
-        cid: $song.attr('data-cid'),
-        name: $song.find('.song-name-txt').text(),
-        artists,
-        album,
-      })
-    });
+    }
 
-    const pageList = [1];
-    $('.views-pagination .pagination-item').each((i, p) => {
-      const $page = $(p).text();
-      pageList.push(Number($page || 0));
-    });
+    const songSection = result.data.contents.find((item: any) => item.view === 'ZJ-Singer-Song-Scroll');
+    if (!songSection || !Array.isArray(songSection.contents)) {
+      return {
+        result: 200,
+        errMsg: '歌手歌曲数据格式异常',
+      };
+    }
+
+    const list: SongInfo[] = songSection.contents
+      .filter((item: any) => item.songItem)
+      .map((item: any) => toResourceSongInfo(item.songItem));
+    const nextPageUrl = result.data.header && result.data.header.nextPageUrl || '';
+    const nextPage = String(nextPageUrl).match(/[?&]pageNo=(\d+)/);
 
     return {
       result: 100,
       data: {
         list,
-        totalPage: Math.max(...pageList),
+        totalPage: nextPage ? Number(nextPage[1]) : page,
       }
     };
   },
@@ -89,34 +89,45 @@ const Router: RouterMap = {
         errMsg: 'id ?'
       };
     }
-    const result = await request(`http://music.migu.cn/v3/music/artist/${id}/album?page=${pageno}`, { dataType: 'raw' });
-    const $ = cheerio.load(result);
-    const list: AlbumInfo[] = [];
-    $('.artist-album-list li').each((i, o) => {
-      const $album = $(o);
-      const artists: ArtistInfo[] = [];
-      $album.find('.album-singers a').each((i, o) => {
-        artists.push({
-          id: getId($(o).attr('href')),
-          name: $(o).text()
-        })
-      });
-      list.push({
-        id: getId($album.find('.thumb-link').attr('href')),
-        picUrl: $album.find('img.thumb-img').attr('data-original'),
-        name: $album.find('.album-name').text(),
-        artists,
-      })
+    const page = Math.max(1, Number(pageno) || 1);
+    const result = await apiRequest(`${API_HOST}/bmw/singer/album/v1.0`, {
+      singerId: id,
+      pageNo: page,
     });
+    if (result.code !== '000000') {
+      return {
+        result: 200,
+        errMsg: result.info || '获取歌手专辑失败',
+      };
+    }
 
-    const pageList = [1];
-    $('.views-pagination .pagination-item').each((i, p) => {
-      const $page = $(p).text();
-      pageList.push(Number($page || 0));
-    });
+    const albums = result.data && result.data.contents;
+    if (!Array.isArray(albums)) {
+      return {
+        result: 200,
+        errMsg: '歌手专辑数据格式异常',
+      };
+    }
+
+    const list: AlbumInfo[] = albums.map((album: any) => ({
+      id: album.resId || '',
+      picUrl: album.img,
+      name: album.txt || '',
+      artists: album.txt2
+        ? String(album.txt2).split('|').filter(Boolean).map((name: string): ArtistInfo => ({
+          id: '',
+          name,
+        }))
+        : [],
+      publishTime: album.txt3,
+    }));
+
+    const nextPageUrl = result.data.header && result.data.header.nextPageUrl || '';
+    const nextPage = String(nextPageUrl).match(/[?&]pageNo=(\d+)/);
+
     return {
       result: 100,
-      data: { list, totalPage: Math.max(...pageList) },
+      data: { list, totalPage: nextPage ? Number(nextPage[1]) : page },
     };
   },
 }

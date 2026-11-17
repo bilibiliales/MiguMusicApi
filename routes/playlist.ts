@@ -1,84 +1,107 @@
 import RouteMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
-import request from "@request";
-import { getBatchSong } from "@util";
-import * as cheerio from 'cheerio';
+import { apiRequest, fullImgUrl } from "@util";
+
+const API_HOST = 'https://app.c.nf.migu.cn';
+const SONG_PAGE_SIZE = 20;
 
 const Router: RouteMap = {
   async ['/']({ query }) {
     const { id } = query;
-    const playListRes = await request(`http://m.music.migu.cn/migu/remoting/query_playlist_by_id_tag?onLine=1&queryChannel=0&createUserId=migu&contentCountMin=5&playListId=${id}`);
+    if (!id) {
+      return {
+        result: 500,
+        errMsg: 'id ?',
+      };
+    }
 
-    const listInfo = playListRes?.rsp?.playList[0];
-
-    if (!listInfo) {
+    const infoResult = await apiRequest(`${API_HOST}/MIGUM2.0/v1.0/content/resourceinfo.do`, {
+      needSimple: '00',
+      resourceType: 2021,
+      resourceId: id,
+    });
+    const listInfo = Array.isArray(infoResult.resource) ? infoResult.resource[0] : undefined;
+    if (infoResult.code !== '000000' || !listInfo) {
       return {
         result: 200,
-        errMsg: playListRes.info || '服务异常',
-      }
+        errMsg: infoResult.info || '歌单不存在或服务异常',
+      };
     }
 
-    const { playListName: name, createName, createUserId, playCount, contentCount, image: picUrl, summary: desc, createTime, updateTime, tagLists, playListType } = listInfo;
-    const baseInfo = {
-      name,
-      id,
-      picUrl,
-      playCount,
-      trackCount: contentCount,
-      desc,
-      creator: {
-        id: createUserId,
-        name: createName || '',
+    const getSongPage = (pageNo: number): Promise<any> => apiRequest(
+      `${API_HOST}/MIGUM3.0/resource/playlist/song/v2.0`,
+      { pageNo, pageSize: SONG_PAGE_SIZE, playlistId: id },
+    );
+
+    const firstPage = await getSongPage(1);
+    if (firstPage.code !== '000000' || !firstPage.data || !Array.isArray(firstPage.data.songList)) {
+      return {
+        result: 200,
+        errMsg: firstPage.info || '获取歌单歌曲失败',
+      };
+    }
+
+    const total = Number(firstPage.data.totalCount) || firstPage.data.songList.length;
+    const pageCount = Math.ceil(total / SONG_PAGE_SIZE);
+    const otherPages = await Promise.all(
+      Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => getSongPage(index + 2)),
+    );
+    const failedPage = otherPages.find(page => (
+      page.code !== '000000' || !page.data || !Array.isArray(page.data.songList)
+    ));
+    if (failedPage) {
+      return {
+        result: 200,
+        errMsg: failedPage.info || '获取歌单歌曲失败',
+      };
+    }
+
+    const songs = [
+      ...firstPage.data.songList,
+      ...otherPages.reduce((list: any[], page: any) => list.concat(page.data.songList), []),
+    ];
+    const list: SongInfo[] = songs.map(song => ({
+      id: song.songId || song.contentId,
+      cid: song.copyrightId,
+      contentId: song.contentId,
+      name: song.songName,
+      artists: (song.singerList || []).map((singer: any) => ({
+        id: singer.id || '',
+        name: singer.name || '',
+      })),
+      album: {
+        id: song.albumId || '',
+        name: song.album || '',
+        picUrl: fullImgUrl(song.img1 || song.img2 || ''),
       },
-      createTime,
-      updateTime,
-      tagLists,
-      list: [] as SongInfo[],
-    };
+      picUrl: fullImgUrl(song.img1 || song.img2 || ''),
+      duration: Number(song.duration) || 0,
+      mvCid: song.mvCopyright,
+    }));
 
-    const cids: string[] = [];
-
-    let pageNo = 1;
-    while ((pageNo-1) * 20 < contentCount) {
-      const listPage = await request(`https://music.migu.cn/v3/music/playlist/${id}?page=${pageNo}`, {
-        dataType: 'raw',
-      })
-
-      const $ = cheerio.load(listPage);
-
-      $('.row.J_CopySong').each((i, v) => {
-        const cid = $(v).attr('data-cid');
-        cid && cids.push(cid);
-      });
-
-      pageNo += 1;
-    }
-
-    // const { contentList = []} = await request.send(`http://m.music.migu.cn/migu/remoting/playlistcontents_query_tag?playListType=${playListType}&playListId=${id}&contentCount=${contentCount}`)
-
-
-    baseInfo.list = await getBatchSong(cids);
-
+    const opNumItem = listInfo.opNumItem || {};
     return {
       result: 100,
-      data: baseInfo,
-    }
-    // for (let i in res.contentList) {
-    //   const { songId } = contentList[i];
-    //   const s = await require('./song')['/']({ req: { query: { id: songId }}}, request).catch(() => null);
-    //   console.log(s);
-    //   s && baseInfo.list.push(s);
-    // }
-
-    // Promise.all(contentList.map(({ songId }) => (
-    //
-    // ))).then((resArr) => {
-    //   baseInfo.list = resArr.map(({ data }) => data).filter((o) => Boolean(o));
-    //   return res.send({
-    //     result: 100,
-    //     data: baseInfo,
-    //   })
-    // })
+      data: {
+        name: listInfo.title,
+        id: listInfo.musicListId,
+        picUrl: fullImgUrl(
+          (listInfo.imgItem && listInfo.imgItem.img) || listInfo.originalImgUrl || '',
+        ),
+        playCount: opNumItem.playNum,
+        songCount: total,
+        trackCount: total,
+        desc: listInfo.summary,
+        creator: {
+          id: listInfo.ownerId,
+          name: listInfo.ownerName || '',
+        },
+        createTime: listInfo.createTime,
+        updateTime: listInfo.publishTime,
+        tagLists: listInfo.tags || [],
+        list,
+      },
+    };
   },
 }
 
