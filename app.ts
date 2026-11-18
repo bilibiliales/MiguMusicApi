@@ -4,10 +4,29 @@ import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
-import fs from 'fs';
 import RouterMap = Types.RouteMap;
+import albumRouter from './routes/album';
+import indexRouter from './routes/index';
+import lyricRouter from './routes/lyric';
+import newRouter from './routes/new';
+import playlistRouter from './routes/playlist';
+import recommendRouter from './routes/recommend';
+import searchRouter from './routes/search';
+import singerRouter from './routes/singer';
+import songRouter from './routes/song';
 
 const app = express();
+const routers: { [name: string]: RouterMap } = {
+  album: albumRouter,
+  index: indexRouter,
+  lyric: lyricRouter,
+  new: newRouter,
+  playlist: playlistRouter,
+  recommend: recommendRouter,
+  search: searchRouter,
+  singer: singerRouter,
+  song: songRouter,
+};
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -20,10 +39,9 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
-fs.readdirSync(path.join(__dirname, 'routes')).reverse().forEach(file => {
-  const filename = file.replace(/(\.js|\.ts)$/, '');
-  const RouterMap: RouterMap = require(`./routes/${filename}`).default;
-  Object.keys(RouterMap).forEach((path: string): void => {
+Object.keys(routers).reverse().forEach(filename => {
+  const routeMap = routers[filename];
+  Object.keys(routeMap).forEach((path: string): void => {
     let fullPah = `/${filename}${path}`;
     if (fullPah === '/index/') {
       fullPah = '/';
@@ -34,7 +52,7 @@ fs.readdirSync(path.join(__dirname, 'routes')).reverse().forEach(file => {
         ...req.query,
         ...req.body,
       };
-      let routeFunc = RouterMap[path];
+      let routeFunc = routeMap[path];
       const func = async (req, res) => {
         const result = await routeFunc({
           query: req.query,
