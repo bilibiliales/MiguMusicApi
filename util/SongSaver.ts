@@ -27,13 +27,13 @@ class SongSaver {
   async query(cid:string, data:SongInfo | undefined = {}): Promise<SongInfo> {
     try {
       const info = this.get(cid);
-      if (info) {
+      if (info && info.contentId) {
         const newInfo = {...info, ...data}
         this.push(cid, newInfo)
         return newInfo;
       }
 
-      const obj: SongInfo = data;
+      const obj: SongInfo = {...info, ...data};
 
       if (!obj.picUrl || !obj.contentId) {
         const detail = await getSongDetail(cid);

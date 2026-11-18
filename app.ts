@@ -57,7 +57,7 @@ Object.keys(routers).reverse().forEach(filename => {
         const result = await routeFunc({
           query: req.query,
           res,
-        }).catch((err) => ({ result: 200, errMsg: `异常：${err.message}`}))
+        }).catch((err) => ({ result: 400, errMsg: `异常：${err.message}`}))
         if (typeof result === 'object') {
           res.send(result);
         }

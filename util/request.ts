@@ -29,7 +29,7 @@ interface ResObj {
   data: string,
 }
 
-const request = async (options: AxiosParam | string, opts: AxiosOpts = {}): Promise<any> => {
+const request = async (options: AxiosParam | string, opts: AxiosOpts = {}, retries: number = 0): Promise<any> => {
   try {
     if (typeof options === 'string') {
       options = { url: options };
@@ -69,15 +69,15 @@ const request = async (options: AxiosParam | string, opts: AxiosOpts = {}): Prom
 
     return res.data;
   } catch (err: any) {
-    if (err.message === 'Request failed with status code 503') {
+    if (err.message === 'Request failed with status code 503' && retries < 3) {
       console.log('retry');
       return new Promise((resolve) => {
         setTimeout(() => {
-          resolve(request(options, opts));
+          resolve(request(options, opts, retries + 1));
         }, 300);
       });
     }
-    return {};
+    throw err;
   }
 }
 

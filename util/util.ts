@@ -41,8 +41,8 @@ export async function apiRequest(url: string, data: object = {}): Promise<any> {
   );
   try {
     return decodeEnvelope(raw);
-  } catch (err) {
-    return {};
+  } catch (err: any) {
+    throw new Error(`Failed to decode Migu API response: ${err.message}`);
   }
 }
 
@@ -71,7 +71,7 @@ export async function getSongDetail(cid: string): Promise<any> {
 export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId: string = ''): Promise<string> {
   const realContentId = contentId || (await getSongDetail(cid)).contentId;
   if (!realContentId) {
-    return '';
+    throw new Error(`Migu did not return a content ID for ${cid}`);
   }
   // 高品质需要登录态，拿不到时退回普通品质
   const flags = toneFlag === 'PQ' ? ['PQ'] : [toneFlag, 'PQ'];
@@ -88,7 +88,7 @@ export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId
       return res.data.url;
     }
   }
-  return '';
+  throw new Error(`Migu did not return a playable URL for ${cid}`);
 }
 
 export async function getLyric(cid: string, lrcUrl: string = ''): Promise<string> {
