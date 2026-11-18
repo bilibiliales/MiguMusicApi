@@ -24,6 +24,12 @@ npm start
 
 启动后打开 `http://localhost:3400`，即可使用在线音乐页面搜索歌曲、歌手、专辑和歌单，播放歌曲、查看歌词并保存本机收藏。页面使用本项目的同源 API；接口文档可从页面中的“API 文档”入口打开。
 
+### Vercel
+
+项目根目录已包含 Vercel 配置。导入 Git 仓库并部署即可：构建命令会运行 `npm run build`，所有请求会转发到 Express Serverless Function，原有 API 路径和网页入口保持不变。
+
+Vercel 函数的文件系统不适合作为持久化存储，因此歌曲信息缓存不会像本地 Node 服务一样可靠地保存到 `data/songUrl.json`。
+
 
 ### npm
 
