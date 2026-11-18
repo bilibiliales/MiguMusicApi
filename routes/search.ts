@@ -4,7 +4,7 @@ import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
 import MvInfo = Types.MvInfo;
 import PlaylistInfo = Types.PlaylistInfo;
-import { apiRequest, fullImgUrl, pickImg, toSongInfo } from "@util";
+import { apiRequest, fullImgUrl, pickImg, toSongInfo } from '../util';
 
 const API_HOST = 'https://app.u.nf.migu.cn/pc';
 

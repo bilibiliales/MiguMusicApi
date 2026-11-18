@@ -1,6 +1,6 @@
 import SongInfo = Types.SongInfo;
 import ArtistInfo = Types.ArtistInfo;
-import request from "@request";
+import request from './request';
 
 // 咪咕新版接口（app.u.nf.migu.cn 等）要求带 H5 客户端标识
 const API_HEADERS = {

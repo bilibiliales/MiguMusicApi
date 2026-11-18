@@ -1,6 +1,6 @@
 import RouteMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
-import { apiRequest, fullImgUrl } from "@util";
+import { apiRequest, fullImgUrl } from '../util';
 
 const API_HOST = 'https://app.c.nf.migu.cn';
 const SONG_PAGE_SIZE = 20;

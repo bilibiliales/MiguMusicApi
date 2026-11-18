@@ -2,7 +2,7 @@ import RouteMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
 import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
-import { apiRequest, pickImg, toResourceSongInfo } from '@util';
+import { apiRequest, pickImg, toResourceSongInfo } from '../util';
 
 const API_HOST = 'https://app.c.nf.migu.cn';
 const SONG_PAGE_SIZE = 100;

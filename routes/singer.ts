@@ -2,7 +2,7 @@ import RouterMap = Types.RouteMap;
 import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
 import SongInfo = Types.SongInfo;
-import { apiRequest, pickImg, toResourceSongInfo } from "@util";
+import { apiRequest, pickImg, toResourceSongInfo } from '../util';
 
 const API_HOST = 'https://app.c.nf.migu.cn';
 

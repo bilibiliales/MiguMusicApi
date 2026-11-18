@@ -1,5 +1,5 @@
 import RouteMap = Types.RouteMap;
-import request from "@request";
+import request from '../util/request';
 
 const API_URL = 'https://app.c.nf.migu.cn/MIGUM2.0/v2.0/content/getMusicData.do';
 

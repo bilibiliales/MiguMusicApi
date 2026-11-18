@@ -2,7 +2,7 @@ import RouteMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
 import ArtistInfo = Types.ArtistInfo;
 import AlbumInfo = Types.AlbumInfo;
-import { apiRequest } from "@util";
+import { apiRequest } from '../util';
 
 const HOME_PAGE_API = 'https://app.c.nf.migu.cn/pc/bmw/page-data/music-index-show/v2.0';
 

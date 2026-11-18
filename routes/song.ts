@@ -1,7 +1,7 @@
 import RouterMap = Types.RouteMap;
 import SongInfo = Types.SongInfo;
 import searchRouter from './search';
-import { getBatchSong, getSongUrl, songSaver } from "@util";
+import { getBatchSong, getSongUrl, songSaver } from '../util';
 
 const Router: RouterMap = {
   async ['/']({ query }) {

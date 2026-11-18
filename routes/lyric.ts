@@ -1,5 +1,5 @@
 import RouteMap = Types.RouteMap;
-import { getLyric } from "@util";
+import { getLyric } from '../util';
 
 const Router: RouteMap = {
   async ['/']({ query }) {

@@ -11,13 +11,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
-    
-    /* 路径别名配置 */
-    "paths": {
-      "@util": ["./util/index.ts"],
-      "@request": ["./util/request.ts"]
-    },
-
     /* 【新增】关闭隐式 any 类型检查，解决 TS7006 报错 */
     "noImplicitAny": false
   },
