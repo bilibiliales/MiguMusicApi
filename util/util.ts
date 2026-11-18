@@ -75,6 +75,7 @@ export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId
   }
   // 高品质需要登录态，拿不到时退回普通品质
   const flags = toneFlag === 'PQ' ? ['PQ'] : [toneFlag, 'PQ'];
+  const failures: string[] = [];
   for (const flag of flags) {
     const res = await apiRequest(`${STRATEGY_HOST}/strategy/listen-url/h5/v2.4`, {
       contentId: realContentId,
@@ -87,8 +88,15 @@ export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId
     if (res.data && res.data.url) {
       return res.data.url;
     }
+    const details = [
+      res.code && `code=${res.code}`,
+      (res.info || res.message || res.msg) && `message=${res.info || res.message || res.msg}`,
+      res.data && res.data.dialogInfo && res.data.dialogInfo.text
+        && `dialog=${res.data.dialogInfo.text}`,
+    ].filter(Boolean);
+    failures.push(`${flag}: ${details.join(', ') || 'no URL in response'}`);
   }
-  throw new Error(`Migu did not return a playable URL for ${cid}`);
+  throw new Error(`Migu did not return a playable URL for ${cid} (${failures.join('; ')})`);
 }
 
 export async function getLyric(cid: string, lrcUrl: string = ''): Promise<string> {
