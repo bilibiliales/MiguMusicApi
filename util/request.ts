@@ -17,6 +17,7 @@ interface AxiosParam {
   headers?: Headers,
   xsrfCookieName?: string,
   withCredentials?: boolean,
+  preserveEmptyQuery?: boolean,
 
   [propName: string]: any,
 }
@@ -37,10 +38,11 @@ const request = async (options: AxiosParam | string, opts: AxiosOpts = {}, retri
     options.method = options.method || 'get';
 
     const {url, data, method} = options;
+    const {preserveEmptyQuery} = options;
     const {dataType} = opts;
 
     if (method === 'get') {
-      options.url = changeUrlQuery(data || {}, url);
+      options.url = changeUrlQuery(data || {}, url, preserveEmptyQuery);
       delete options.data;
     }
 

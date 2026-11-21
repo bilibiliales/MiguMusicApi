@@ -34,9 +34,13 @@ export function decodeEnvelope(data: Buffer | string): any {
   return JSON.parse(plain.toString('utf8'));
 }
 
-export async function apiRequest(url: string, data: object = {}): Promise<any> {
+export async function apiRequest(
+  url: string,
+  data: object = {},
+  preserveEmptyQuery: boolean = false,
+): Promise<any> {
   const raw = await request(
-    { url, data, headers: API_HEADERS, responseType: 'arraybuffer' },
+    { url, data, headers: API_HEADERS, responseType: 'arraybuffer', preserveEmptyQuery },
     { dataType: 'raw' },
   );
   try {
@@ -96,6 +100,32 @@ export async function getSongUrl(cid: string, toneFlag: string = 'PQ', contentId
     ].filter(Boolean);
     failures.push(`${flag}: ${details.join(', ') || 'no URL in response'}`);
   }
+
+  for (const flag of flags) {
+    const res = await apiRequest(
+      'https://app.c.nf.migu.cn/MIGUM3.0/strategy/pc/listen/v1.0',
+      {
+        scene: '',
+        netType: '01',
+        resourceType: 2,
+        copyrightId: cid,
+        contentId: realContentId,
+        toneFlag: flag,
+      },
+      true,
+    );
+    if (res.data && res.data.url) {
+      return res.data.url;
+    }
+    const details = [
+      res.code && `code=${res.code}`,
+      (res.info || res.message || res.msg) && `message=${res.info || res.message || res.msg}`,
+      res.data && res.data.dialogInfo && res.data.dialogInfo.text
+        && `dialog=${res.data.dialogInfo.text}`,
+    ].filter(Boolean);
+    failures.push(`PC ${flag}: ${details.join(', ') || 'no URL in response'}`);
+  }
+
   throw new Error(`Migu did not return a playable URL for ${cid} (${failures.join('; ')})`);
 }
 
@@ -171,14 +201,18 @@ export function getQueryFromUrl(key?: string | null, search: string = ''): any {
   }
 }
 
-export function changeUrlQuery(obj: object, baseUrl: string = ''): string {
+export function changeUrlQuery(
+  obj: object,
+  baseUrl: string = '',
+  preserveEmpty: boolean = false,
+): string {
   const query: object = getQueryFromUrl(null, baseUrl);
   let url: string = baseUrl.split('?')[0];
 
   const newQuery: object = {...query, ...obj};
   let queryArr: string[] = [];
   Object.keys(newQuery).forEach((key: string): void => {
-    if (newQuery[key] !== undefined && newQuery[key] !== '') {
+    if (newQuery[key] !== undefined && (preserveEmpty || newQuery[key] !== '')) {
       queryArr.push(`${key}=${encodeURIComponent(newQuery[key])}`);
     }
   });
